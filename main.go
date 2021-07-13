@@ -70,12 +70,11 @@ func main() {
 
 	prometheus.MustRegister(apiDurationHistogram)
 
-	log.Printf("Serving app on %s:%s...", host, port)
-
 	http.Handle("/metrics", promhttp.Handler())
 	http.HandleFunc("/redirect", handler)
 	http.HandleFunc("/health", health)
 
+	log.Printf("Serving app on %s:%s...", host, port)
 	error := http.ListenAndServe(fmt.Sprintf("%s:%s", host, port), nil)
 	if error != nil {
 		panic(error)
