@@ -40,6 +40,6 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           push: true
-          tags: user/callbacks:latest
+          tags: user/app:latest
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
