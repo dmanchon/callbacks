@@ -10,3 +10,4 @@ RUN --mount=type=cache,target=/root/.cache/go-build CGO_ENABLED=0 GOOS=linux go 
 
 FROM scratch as bin
 COPY --from=build /build/app.exe /
+CMD ["/app.exe"]
