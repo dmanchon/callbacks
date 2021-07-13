@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -40,13 +41,24 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		url, err := base64.StdEncoding.DecodeString(state)
+		uri, err := base64.StdEncoding.DecodeString(state)
 		if err != nil {
-			http.Error(w, "'state' is not valid base64 string", http.StatusPreconditionFailed)
+			err = fmt.Errorf("'state' is not valid base64 string: %v", err)
+			http.Error(w, err.Error(), http.StatusPreconditionFailed)
 			apiDurationHistogram.WithLabelValues("redirect", "invalid_base64").Observe(v)
 			return
 		}
-		http.Redirect(w, r, string(url), http.StatusFound)
+
+		// just checking that the redirection is a valid url
+		_, err = url.ParseRequestURI(string(uri))
+		if err != nil {
+			err = fmt.Errorf("malformed redirect uri: %v", err)
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			apiDurationHistogram.WithLabelValues("redirect", "malformed_uri").Observe(v)
+			return
+		}
+
+		http.Redirect(w, r, string(uri), http.StatusFound)
 		apiDurationHistogram.WithLabelValues("redirect", "none").Observe(v)
 	}))
 	defer timer.ObserveDuration()
