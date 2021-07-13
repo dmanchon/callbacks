@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -51,23 +52,31 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	defer timer.ObserveDuration()
 }
 
+func GetEnv(key string, fallback string) string {
+	val := os.Getenv(key)
+	if val == "" {
+		return fallback
+	}
+	return val
+}
+
 func main() {
-	var port int
+	var port string
 	var host string
 
-	flag.StringVar(&host, "host", "localhost", "Server host")
-	flag.IntVar(&port, "port", 8080, "Server port")
+	flag.StringVar(&host, "host", GetEnv("HOST", "localhost"), "Server host")
+	flag.StringVar(&port, "port", GetEnv("PORT", "8080"), "Server port")
 	flag.Parse()
 
 	prometheus.MustRegister(apiDurationHistogram)
 
-	log.Printf("Serving app on %s:%d...", host, port)
+	log.Printf("Serving app on %s:%s...", host, port)
 
 	http.Handle("/metrics", promhttp.Handler())
 	http.HandleFunc("/redirect", handler)
 	http.HandleFunc("/health", health)
 
-	error := http.ListenAndServe(fmt.Sprintf("%s:%d", host, port), nil)
+	error := http.ListenAndServe(fmt.Sprintf("%s:%s", host, port), nil)
 	if error != nil {
 		panic(error)
 	}
