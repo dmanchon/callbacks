@@ -1,12 +1,12 @@
-# syntax=docker/dockerfile:1
-FROM golang:1.16
+# syntax=docker/dockerfile:1.2
+FROM golang:1.16 as build
 
 WORKDIR /build
-COPY go.mod go.sum .
-RUN go mod tidy
+COPY go.mod .
+COPY go.sum .
+RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o app.exe main.go
+RUN --mount=type=cache,target=/root/.cache/go-build CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o app.exe main.go
 
-FROM alpine:latest
-WORKDIR /root/
-COPY --from=0 /build/app.exe .
+FROM scratch as bin
+COPY --from=build /build/app.exe /
