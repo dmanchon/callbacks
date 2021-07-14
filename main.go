@@ -50,7 +50,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// just checking that the redirection is a valid url
-		_, err = url.ParseRequestURI(string(uri))
+		finalUri, err := url.ParseRequestURI(string(uri))
 		if err != nil {
 			err = fmt.Errorf("malformed redirect uri: %v", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -58,7 +58,17 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		http.Redirect(w, r, string(uri), http.StatusFound)
+		// we need to propagate the original callback params + the ones encoded in the base64 redirect_uri
+		queryParams := finalUri.Query()
+		for key, values := range r.URL.Query() {
+			for _, value := range values {
+				queryParams.Add(key, value)
+			}
+		}
+		finalUri.RawQuery = queryParams.Encode()
+
+		// and now we return an HTTP 302 with the correct location header
+		http.Redirect(w, r, finalUri.String(), http.StatusFound)
 		apiDurationHistogram.WithLabelValues("redirect", "none").Observe(v)
 	}))
 	defer timer.ObserveDuration()

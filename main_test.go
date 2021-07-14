@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 )
 
@@ -18,9 +19,10 @@ func TestGetEnv(t *testing.T) {
 func TestRedirectHandler(t *testing.T) {
 	redirect_uri := "https://onna.com"
 	state := base64.StdEncoding.EncodeToString([]byte(redirect_uri))
-	url := fmt.Sprintf("/redirect?state=%s", state)
-	req := httptest.NewRequest(http.MethodGet, url, nil)
+	uri := fmt.Sprintf("/redirect?state=%s", state)
+	req := httptest.NewRequest(http.MethodGet, uri, nil)
 	res := httptest.NewRecorder()
+	desiredLocation := fmt.Sprintf("%s?state=%s", redirect_uri, state)
 
 	handler(res, req)
 
@@ -28,8 +30,8 @@ func TestRedirectHandler(t *testing.T) {
 		t.Errorf("got status %d but wanted %d", res.Code, http.StatusFound)
 	}
 
-	location := res.Header().Get("Location")
-	if location != redirect_uri {
-		t.Errorf("got status %s but wanted %s", location, redirect_uri)
+	location, _ := url.QueryUnescape(res.Header().Get("Location"))
+	if location != desiredLocation {
+		t.Errorf("got status %s but wanted %s", location, desiredLocation)
 	}
 }
